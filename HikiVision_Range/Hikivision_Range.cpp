@@ -1,4 +1,4 @@
-
+#define  _CRT_SECURE_NO_WARNINGS
 #include "iostream"
 #include "MyCamera.h"
 #include "stdio.h"
@@ -11,6 +11,7 @@
 
 
 using namespace cv;
+using namespace std;
 
 bool g_bExit = false;
 unsigned int g_nPayloadSize = 0;
@@ -51,13 +52,20 @@ static  unsigned int __stdcall WorkThread(void* pUser)
 		{
 			printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
 				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);
-
+			//生成cv::Mat
 			Mat matImage(
 				cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
 				CV_8UC1,
 				stOutFrame.pBufAddr
 			);
-			imshow("Camera 0", matImage);
+			/*long threadidx = GetCurrentThreadId();
+			if (threadidx == 17456)
+			{*/
+			char tmp[20];
+			sprintf(tmp, "%ld", GetCurrentThreadId());
+ 				imshow(tmp, matImage);
+			//}
+			matImage.release();
 
 		}
 		else
@@ -87,7 +95,8 @@ int main()
 
 	int nRet = MV_OK;
 	void* handle = NULL;
-
+	BYTE *pImageBuffer = NULL;
+	
 	//获取设备枚举列表
 	MV_CC_DEVICE_INFO_LIST stDevList;
 	memset(&stDevList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
@@ -164,15 +173,53 @@ int main()
 		printf("Start Grabbing fail! nRet [0x%x]\n", nRet);
 	}
 
-	while (1) {
-		unsigned int nThreadID = 0;
-		void* hThreadHandle = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID);
-		if (NULL == hThreadHandle)
+	MV_FRAME_OUT stOutFrame = { 0 };
+	memset(&stOutFrame, 0, sizeof(MV_FRAME_OUT));
+	
+
+	while (1)
+	{
+		nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
+		if (nRet == MV_OK)
 		{
-			printf("Get ThreadHandle Error\n");
-			break;
+			printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);
+
+			//生成cv::Mat
+			Mat matImage(
+				cvSize(2592, 2048),
+				CV_8UC1,
+				stOutFrame.pBufAddr
+			);
+			
+			imshow("Camera 0", matImage);
+			cvWaitKey(1);  
+			matImage.release();
 		}
-	Sleep(1000);
+		else
+		{
+			printf("No data[0x%x]\n", nRet);
+		}
+		if (NULL != stOutFrame.pBufAddr)
+		{
+			nRet = MV_CC_FreeImageBuffer(handle, &stOutFrame);
+			if (nRet != MV_OK)
+			{
+				printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+			}
+		}
 	}
+
+
+	//while (1) {
+	//	unsigned int nThreadID = 0;
+	//	void* hThreadHandle = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID);
+	//	if (NULL == hThreadHandle)
+	//	{
+	//		printf("Get ThreadHandle Error\n");
+	//		break;
+	//	}
+	//Sleep(1000);
+	//}
 	return 0;
 }
