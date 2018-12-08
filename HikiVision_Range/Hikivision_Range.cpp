@@ -18,6 +18,7 @@ using namespace std;
 //#define GET_IDENTIFIER //显示标示结果
 //#define SINGLE_CAMERA_TEST //单相机性能测试
 #define STIMULATE_MULTI_CAMERA_TEST // 多相机性能测试
+//#define WORK_THREAD_TEST  //工作线程
 
 bool g_bExit = false;
 unsigned int g_nPayloadSize = 0;
@@ -51,49 +52,111 @@ static  unsigned int __stdcall WorkThread(void* pUser)
 {
 	int nRet = MV_OK;
 
-	MV_FRAME_OUT stOutFrame = { 0 };
-	memset(&stOutFrame, 0, sizeof(MV_FRAME_OUT));
+	MV_FRAME_OUT stOutFrame1 = { 0 };
+	memset(&stOutFrame1, 0, sizeof(MV_FRAME_OUT));
+	//MV_FRAME_OUT stOutFrame2 = { 0 };
+	//memset(&stOutFrame1, 0, sizeof(MV_FRAME_OUT));
+	//int counter = 0;
 
-	while (1)
-	{
-		nRet = MV_CC_GetImageBuffer(pUser, &stOutFrame, 1000);
-		if (nRet == MV_OK)
-		{
-			printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
-				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);
-			//生成cv::Mat
-			Mat matImage(
-				cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
-				CV_8UC1,
-				stOutFrame.pBufAddr
-			);
-			/*long threadidx = GetCurrentThreadId();
-			if (threadidx == 17456)
-			{*/
-			/*char tmp[20];
-			sprintf(tmp, "%ld", GetCurrentThreadId());*/
- 			imshow("Camera 0", matImage);
-			cvWaitKey(1);
-			//}
-			matImage.release();
-
-		}
-		else
-		{
-			printf("No data[0x%x]\n", nRet);
-		}
-		if (NULL != stOutFrame.pBufAddr)
-		{
-			nRet = MV_CC_FreeImageBuffer(pUser, &stOutFrame);
-			if (nRet != MV_OK)
+	while(1){
+		//if (counter % 2 == 0) {
+			//获取图像buffer
+			nRet = MV_CC_GetImageBuffer(pUser, &stOutFrame1, 1000);
+			if (nRet == MV_OK)
 			{
-				printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+					stOutFrame1.stFrameInfo.nWidth, stOutFrame1.stFrameInfo.nHeight, stOutFrame1.stFrameInfo.nFrameNum);
+				//生成cv::Mat
+				Mat matImage(
+					cvSize(stOutFrame1.stFrameInfo.nWidth, stOutFrame1.stFrameInfo.nHeight),
+					CV_8UC1,
+					stOutFrame1.pBufAddr
+				);
+				////namedWindow("Camera 0", 0);
+				////imshow("Camera 0", matImage);
+				int Rows = matImage.rows;
+				MPoint *point;
+				point = new MPoint[Rows];
+				double maxError = 0.05;
+				double minError = 0.25;
+				int xRange = 40;
+				int threads = 8;
+				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+
+				#pragma omp parallel for  num_threads(threads)
+							for (int i = 0; i < 8; i++) {
+								//获取高斯中心
+								getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+							}
+							//cvWaitKey(1);
+				
+				matImage.release();
+
 			}
-		}
-		/*if (g_bExit)
-		{
-			break;
-		}*/
+			else
+			{
+				printf("No data[0x%x]\n", nRet);
+			}
+			if (NULL != stOutFrame1.pBufAddr)
+			{
+				nRet = MV_CC_FreeImageBuffer(pUser, &stOutFrame1);
+				if (nRet != MV_OK)
+				{
+					printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				}
+			}
+			//counter++;
+		//}
+		//if (counter % 2 == 1) {
+		//	//获取图像buffer
+		//	nRet = MV_CC_GetImageBuffer(pUser, &stOutFrame2, 1000);
+		//	if (nRet == MV_OK)
+		//	{
+		//		printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+		//			stOutFrame2.stFrameInfo.nWidth, stOutFrame2.stFrameInfo.nHeight, stOutFrame2.stFrameInfo.nFrameNum);
+		//		//生成cv::Mat
+		//		Mat matImage(
+		//			cvSize(stOutFrame2.stFrameInfo.nWidth, stOutFrame2.stFrameInfo.nHeight),
+		//			CV_8UC1,
+		//			stOutFrame2.pBufAddr
+		//		);
+		//		//namedWindow("Camera 0", 0);
+		//		//imshow("Camera 0", matImage);
+		//		int Rows = matImage.rows;
+		//		MPoint *point;
+		//		point = new MPoint[Rows];
+		//		double maxError = 0.05;
+		//		double minError = 0.25;
+		//		int xRange = 40;
+		//		int threads = 8;
+		//		getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+		//		//#pragma omp parallel for  
+		//		//			for (int i = 0; i < 8; i++) {
+		//		//				//获取高斯中心
+		//		//				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+		//		//			}
+		//		//			//cvWaitKey(1);
+		//		matImage.release();
+
+		//	}
+		//	else
+		//	{
+		//		printf("No data[0x%x]\n", nRet);
+		//	}
+		//	if (NULL != stOutFrame2.pBufAddr)
+		//	{
+		//		nRet = MV_CC_FreeImageBuffer(pUser, &stOutFrame2);
+		//		if (nRet != MV_OK)
+		//		{
+		//			printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+		//		}
+		//	}
+		//	counter++;
+		//}
+	/*if (g_bExit)
+	{
+		break;
+	}*/
 	}
 	return 0;
 }
@@ -237,13 +300,13 @@ int main()
 #ifdef SINGLE_CAMERA_TEST
 	while (1)
 	{
-		Twatch.start();
+		
 		nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
 		if (nRet == MV_OK)
 		{
 			/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
 				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
-
+			Twatch.start();
 			//生成cv::Mat
 			Mat matImage(
 				cvSize(2592, 2048),
@@ -268,6 +331,14 @@ int main()
 			//imshow("Camera 0", matImage);
 			//cvWaitKey(1);
 			matImage.release();
+			FrameCount++;
+			Twatch.stop();
+			if (Twatch.elapsed() > 1000000)
+			{
+				printf("当前帧率为%dfps\n", FrameCount);
+				FrameCount = 0;
+				Twatch.restart();
+			}
 		}
 		else
 		{
@@ -281,21 +352,14 @@ int main()
 				printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
 			}
 		}
-		FrameCount++;
-		Twatch.stop();
-		if (Twatch.elapsed() > 1000000)
-		{
-			printf("当前帧率为%dfps\n", FrameCount);
-			FrameCount = 0;
-			Twatch.restart();
-		}
+		
 	}
 #endif
 
 #ifdef STIMULATE_MULTI_CAMERA_TEST
 	while (1)
 	{
-		Twatch.start();
+		
 		nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
 		if (nRet == MV_OK)
 		{
@@ -315,9 +379,10 @@ int main()
 			double minError = 0.25;
 			int xRange = 40;
 			int threads = 8;
+			Twatch.start();
 #pragma omp parallel for num_threads(8)
 			//模拟8台相机的工作流
-			for (int i = 0; i < 8; i++) 
+			for (int i = 0; i < 4; i++) 
 			{
 				//获取高斯中心
 				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
@@ -331,6 +396,7 @@ int main()
 			//imshow("Camera 0", matImage);
 			//cvWaitKey(1);
 			matImage.release();
+			delete point;
 		}
 		else
 		{
@@ -356,16 +422,20 @@ int main()
 	}
 #endif
 
-/*
-	while (1) {
-		unsigned int nThreadID = 0;
-		void* hThreadHandle = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID);
-		if (NULL == hThreadHandle)
+
+#ifdef WORK_THREAD_TEST	
+		unsigned int nThreadID0 = 0;
+		void* hThreadHandle0 = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID0);
+
+		if (NULL == hThreadHandle0)
 		{
 			printf("Get ThreadHandle Error\n");
-			break;
+			//break;
 		}
-	Sleep(1000);
-	}*/
+		
+		Sleep(1000);
+	//} while (1);
+#endif
+	
 	return 0;
 }
