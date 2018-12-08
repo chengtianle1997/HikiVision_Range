@@ -8,7 +8,8 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-
+#include "RangeDetection.h"
+#include "omp.h"
 
 using namespace cv;
 using namespace std;
@@ -61,9 +62,10 @@ static  unsigned int __stdcall WorkThread(void* pUser)
 			/*long threadidx = GetCurrentThreadId();
 			if (threadidx == 17456)
 			{*/
-			char tmp[20];
-			sprintf(tmp, "%ld", GetCurrentThreadId());
- 				imshow(tmp, matImage);
+			/*char tmp[20];
+			sprintf(tmp, "%ld", GetCurrentThreadId());*/
+ 			imshow("Camera 0", matImage);
+			cvWaitKey(1);
 			//}
 			matImage.release();
 
@@ -85,7 +87,6 @@ static  unsigned int __stdcall WorkThread(void* pUser)
 			break;
 		}*/
 	}
-
 	return 0;
 }
 
@@ -95,7 +96,7 @@ int main()
 
 	int nRet = MV_OK;
 	void* handle = NULL;
-	BYTE *pImageBuffer = NULL;
+	
 	
 	//获取设备枚举列表
 	MV_CC_DEVICE_INFO_LIST stDevList;
@@ -182,8 +183,8 @@ int main()
 		nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
 		if (nRet == MV_OK)
 		{
-			printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
-				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);
+			/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
 
 			//生成cv::Mat
 			Mat matImage(
@@ -191,7 +192,21 @@ int main()
 				CV_8UC1,
 				stOutFrame.pBufAddr
 			);
-			
+			int Rows = matImage.rows;
+			MPoint *point;
+			point = new MPoint[Rows];
+			double maxError = 0.05;
+			double minError = 0.25;
+			int xRange = 40;
+			int threads = 8;
+			//获取高斯中心
+			getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+
+			//double doorin = 0.2;
+			//int eHeight = 0;				
+			////基于double的有阈值误差标记函数
+			//getErrorIdentifyDoubleW(matImage, point, doorin, eHeight);
+			cvNamedWindow("Camera 0", 0); 
 			imshow("Camera 0", matImage);
 			cvWaitKey(1);  
 			matImage.release();
@@ -210,16 +225,16 @@ int main()
 		}
 	}
 
-
-	//while (1) {
-	//	unsigned int nThreadID = 0;
-	//	void* hThreadHandle = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID);
-	//	if (NULL == hThreadHandle)
-	//	{
-	//		printf("Get ThreadHandle Error\n");
-	//		break;
-	//	}
-	//Sleep(1000);
-	//}
+/*
+	while (1) {
+		unsigned int nThreadID = 0;
+		void* hThreadHandle = (void*)_beginthreadex(NULL, 0, WorkThread, handle, 0, &nThreadID);
+		if (NULL == hThreadHandle)
+		{
+			printf("Get ThreadHandle Error\n");
+			break;
+		}
+	Sleep(1000);
+	}*/
 	return 0;
 }

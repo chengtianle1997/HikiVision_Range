@@ -121,10 +121,12 @@
   <ItemGroup>
     <ClCompile Include="Hikivision_Range.cpp" />
     <ClCompile Include="MyCamera.cpp" />
-    <ClCompile Include="Packet_Range.cpp" />
+    <ClCompile Include="RangeDetection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyCamera.h" />
+    <ClInclude Include="RangeDetection.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
