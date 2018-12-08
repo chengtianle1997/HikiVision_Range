@@ -59,10 +59,10 @@ void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minErro
 	//imshow("canny function", dstImage);
 	int Rows = cloneImage.rows;
 	int Cols = cloneImage.cols*cloneImage.channels();
-	int *brightness;
+	//int *brightness;
 	//int threads = 2;//调用线程数
-	brightness = new int[Rows];
-	memset(brightness, 0, Rows);
+	//brightness = new int[Rows];
+	//memset(brightness, 0, Rows);
 	//getPeaker1(matImage, point);
 #pragma omp parallel for num_threads(threads)
 	for (int i = 0; i < Rows; i++)
@@ -80,7 +80,7 @@ void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minErro
 		point[i].y = i;
 		point[i].x = MaxX;
 		//point[i].bright = MaxPixel;
-		brightness[i] = MaxPixel;
+		point[i].brightness = MaxPixel;
 	}
 	/*for (int i = 0; i < Rows; i++)
 	{
@@ -148,7 +148,7 @@ void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minErro
 			//cout << "condition2" << (PixelData < ((1 - maxError)*brightness[i]))<<endl;
 			//cout << "condition3" << (abs(j - point[i].x) < xRange) << endl;
 
-			if (PixelData > minError*brightness[i] && PixelData < ((1 - maxError)*brightness[i])) {
+			if (PixelData > minError*point[i].brightness && PixelData < ((1 - maxError)*point[i].brightness)) {
 				gpoint[Pixnum].x = j;
 				gpoint[Pixnum].brightness = PixelData;
 				Pixnum++;
@@ -252,7 +252,7 @@ void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minErro
 			point[i].bright = 0;
 		}
 		point[i].cy = i;
-		printf("(%lf , %lf): %d)\n", point[i].cx, point[i].cy,point[i].bright);
+		//printf("(%lf , %lf): %d)\n", point[i].cx, point[i].cy,point[i].brightness);
 		delete[]gpoint;
 	}
 
@@ -269,11 +269,11 @@ void getErrorIdentifyDoubleW(Mat matImage, MPoint *point, double doorin, int eHe
 	int Cols = matImage.cols*matImage.channels();//x
 	//int div = 64;
 	double error;
-	for (int j = 0; j < Rows; j++) {
+	for (int j = 1; j < Rows; j++) {
 		//point[j].errorup = point[j].cx - point[j - 1].cx;
 		if (abs(point[j].cx - point[j - 1].cx) > doorin) {
 			line(matImage, Point((point[j].cx - 30), point[j].cy), Point((point[j].cx + 30), point[j].cy), Scalar(255, 100, 100), 2, 8, 0);
-			line(matImage, Point(point[j].cx, point[j].cy - 30), Point(point[j].cx, point[j].cy + 30), Scalar(255, 100, 100), 2, 8, 0);
+			//line(matImage, Point(point[j].cx, point[j].cy - 30), Point(point[j].cx, point[j].cy + 30), Scalar(255, 100, 100), 2, 8, 0);
 			error = point[j].cx - point[j - 1].cx;
 			ostringstream oss;
 			oss << error;
@@ -281,6 +281,6 @@ void getErrorIdentifyDoubleW(Mat matImage, MPoint *point, double doorin, int eHe
 			putText(matImage, texterror, Point(point[j].cx + 40, point[j].cy), 2, 0.5, Scalar(255, 100, 100), 1, 8, 0);
 		}
 	}
-	namedWindow("error identification");
+	namedWindow("error identification",0);
 	imshow("error identification", matImage);
 }

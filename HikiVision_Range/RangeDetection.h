@@ -8,15 +8,13 @@ using namespace cv;
 //每列、行存下的重要数据点和其他信息
 typedef struct MPoint
 {
-	int x;
-	int y;
-	double cx;
-	double cy;
-	int bright;
-	int Pixnum;
-	int xstart;
-	int xstop;
-	int errorup;
+	int x; //粗估中心
+	int y; //行位置
+	int brightness; //行最大亮度
+	double cx;  //高斯拟合中心
+	double cy;  //高斯拟合行位置
+	int bright;  //高斯拟合最大亮度（虚拟最大亮度）
+	int Pixnum;  //高斯点个数
 } MPoint;
 
 //高斯点
