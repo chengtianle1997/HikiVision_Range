@@ -18,7 +18,7 @@ using namespace std;
 
 #define GET_IDENTIFIER //显示标示结果
 #define SINGLE_CAMERA_TEST //单相机性能测试
-#define STIMULATE_MULTI_CAMERA_TEST // 多相机性能测试
+//#define STIMULATE_MULTI_CAMERA_TEST // 多相机性能测试
 #define DOUBLE_BUFFER_TEST //双缓冲测试
 #define WORK_THREAD_TEST  //工作线程测试
 
@@ -80,8 +80,8 @@ static  unsigned int __stdcall WorkThread(void* pUser)
 				int Rows = matImage.rows;
 				MPoint *point;
 				point = new MPoint[Rows];
-				double maxError = 0.05;
-				double minError = 0.25;
+				double maxError = 0.10;
+				double minError = 0.10;
 				int xRange = 40;
 				int threads = 8;
 			    //获取高斯中心
@@ -244,10 +244,13 @@ int main()
 
 	//input the test mode
 	printf("\n0:Show the Identify Result\n");
-	printf("1:Single camera Test for threads\n");
-	printf("2:Multi-Stimulate camera Test for threads\n");
-	printf("3:WorkThread Test\n");
+	printf("1:Single camera Test for threads(with acquisition)\n");
+	printf("2:Show the Identify Result by manu\n");
+	//printf("2:Multi-Stimulate camera Test for threads\n");
+	//printf("3:WorkThread Test\n");
 	printf("4:Double Buffer Test for single camera\n");
+	printf("5:Single camera Test for threads(without acquisition)\n");
+	printf("6:Encode as mjpeg\n");
 	unsigned int TestNum = 0;
 	printf("Please Input test mode:");
 	scanf("%d", &TestNum);
@@ -284,6 +287,30 @@ int main()
 	}
 	g_nPayloadSize = stParam.nCurValue;
 
+	//Set the properties of the camera
+	//设置曝光时间
+	float newExposureTime = 30000;
+	nRet = MV_CC_SetFloatValue(handle, "ExposureTime", newExposureTime);
+	if (MV_OK != nRet)
+	{
+		printf("Set ExposureTime fail! nRet [0x%x]\n", nRet);
+	}
+	//设置帧率
+	float newAcquisitionFrameRate = 60.0;
+	nRet = MV_CC_SetFloatValue(handle, "AcquisitionFrameRate", newAcquisitionFrameRate);
+	if (MV_OK != nRet)
+	{
+		printf("Set AcquisitionFrameRate fail! nRet [0x%x]\n", nRet);
+	}
+	//设置增益
+	float newGain = 15;
+	nRet = MV_CC_SetFloatValue(handle, "Gain", newGain);
+	if (MV_OK != nRet)
+	{
+		printf("Set Gain fail! nRet [0x%x]\n", nRet);
+	}
+
+
 	//开始取流
 	nRet = MV_CC_StartGrabbing(handle);
 	if (MV_OK != nRet)
@@ -296,51 +323,68 @@ int main()
 
 	switch(TestNum)
 	{
-	case 0:
+	case 0: {
 #ifdef GET_IDENTIFIER
-	while (1)
-	{
-		nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
-		if (nRet == MV_OK)
-		{
-			/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
-				stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
-
-			//生成cv::Mat
-			Mat matImage(
-				cvSize(2592, 2048),
-				CV_8UC1,
-				stOutFrame.pBufAddr
-			);
-			int Rows = matImage.rows;
-			MPoint *point;
-			point = new MPoint[Rows];
-			double maxError = 0.05;
-			double minError = 0.25;
-			int xRange = 40;
-			int threads = 8;
-			//获取高斯中心
-			getGaussCenter(matImage, point, maxError, minError, xRange, threads);
-
-			double doorin = 0.5;
-			int eHeight = 0;				
-			//基于double的有阈值误差标记函数
-			getErrorIdentifyDoubleW(matImage, point, doorin, eHeight);
-			//cvNamedWindow("Camera 0", 0); 
-			//imshow("Camera 0", matImage);
-			cvWaitKey(1);  
-			matImage.release();
+		double maxError = 0.05;
+		double minError = 0.10;
+		int xRange = 20;
+		int threads = 8;
+		int DefaultSetting = 0;
+		double doorin = 0.38;
+		printf("Would you like to change the default settings? 0-No 1-Yes");
+		scanf("%d", &DefaultSetting);
+		if (DefaultSetting) {
+			printf("Please input the Top error:");
+			scanf("%lf", &maxError);
+			printf("Please input the Bottom error:");
+			scanf("%lf", &minError);
+			printf("Please input the xRange:");
+			scanf("%d", &xRange);
+			printf("Please input the identify error:");
+			scanf("%lf", &doorin);
 		}
-		else
+
+		while (1)
 		{
-			printf("No data[0x%x]\n", nRet);
-		}
-		if (NULL != stOutFrame.pBufAddr)
-		{
-			nRet = MV_CC_FreeImageBuffer(handle, &stOutFrame);
-			if (nRet != MV_OK)
+			nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
+			if (nRet == MV_OK)
 			{
-				printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+					stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
+
+					//生成cv::Mat
+				Mat matImage(
+					cvSize(stOutFrame.stFrameInfo.nWidth,stOutFrame.stFrameInfo.nHeight),
+					CV_8UC1,
+					stOutFrame.pBufAddr
+				);
+				int Rows = matImage.rows;
+				MPoint *point;
+				point = new MPoint[Rows];
+
+				//获取高斯中心
+				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+
+				int eHeight = 0;
+				//基于double的有阈值误差标记函数
+				getErrorIdentifyDoubleW(matImage, point, doorin, eHeight);
+				//cvNamedWindow("Camera 0", 0); 
+				//imshow("Camera 0", matImage);
+				cvWaitKey(1);
+				matImage.release();
+				delete point;
+			}
+			else
+			{
+				printf("No data[0x%x]\n", nRet);
+			}
+			if (NULL != stOutFrame.pBufAddr)
+			{
+				nRet = MV_CC_FreeImageBuffer(handle, &stOutFrame);
+				if (nRet != MV_OK)
+				{
+					printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				}
 			}
 		}
 	}
@@ -355,16 +399,16 @@ int main()
 		scanf("%d",&threads);
 		while (1)
 		{
-
+			Twatch.start();
 			nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
 			if (nRet == MV_OK)
 			{
 				/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
 					stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
-				Twatch.start();
-				//生成cv::Mat
+
+					//生成cv::Mat
 				Mat matImage(
-					cvSize(2592, 2048),
+					cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
 					CV_8UC1,
 					stOutFrame.pBufAddr
 				);
@@ -374,7 +418,7 @@ int main()
 				double maxError = 0.05;
 				double minError = 0.25;
 				int xRange = 40;
-				
+
 				//获取高斯中心
 				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
 
@@ -387,13 +431,8 @@ int main()
 				//cvWaitKey(1);
 				matImage.release();
 				FrameCount++;
-				Twatch.stop();
-				if (Twatch.elapsed() > 1000000)
-				{
-					printf("当前帧率为%dfps\n", FrameCount);
-					FrameCount = 0;
-					Twatch.restart();
-				}
+
+				delete point;
 			}
 			else
 			{
@@ -408,6 +447,14 @@ int main()
 				}
 			}
 
+
+			Twatch.stop();
+			if (Twatch.elapsed() > 1000000)
+			{
+				printf("当前帧率为%dfps\n", FrameCount);
+				FrameCount = 0;
+				Twatch.restart();
+			}
 		}
 #endif
 	}
@@ -415,6 +462,48 @@ int main()
 
 
 	case 2: {
+		while (1)
+		{
+
+			nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
+			if (nRet == MV_OK)
+			{
+				/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+					stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
+
+					//生成cv::Mat
+				Mat matImage(
+					cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
+					CV_8UC1,
+					stOutFrame.pBufAddr
+				);
+				int Rows = matImage.rows;
+				MPoint *point;
+				point = new MPoint[Rows];
+				double maxError = 0.05;
+				double minError = 0.25;
+				int xRange = 40;
+				int threads = 8;
+				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+				cvNamedWindow("src", 0);
+				getErrorManu(matImage, point);
+				matImage.release();
+				delete point;
+			}
+			else
+			{
+				printf("No data[0x%x]\n", nRet);
+			}
+			if (NULL != stOutFrame.pBufAddr)
+			{
+				nRet = MV_CC_FreeImageBuffer(handle, &stOutFrame);
+				if (nRet != MV_OK)
+				{
+					printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				}
+			}
+		}
+
 #ifdef STIMULATE_MULTI_CAMERA_TEST
 		while (1)
 		{
@@ -427,7 +516,7 @@ int main()
 
 					//生成cv::Mat
 				Mat matImage(
-					cvSize(2592, 2048),
+					cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
 					CV_8UC1,
 					stOutFrame.pBufAddr
 				);
@@ -530,6 +619,70 @@ int main()
 #endif
 	}
 		break;
+	case 5: {
+		int threads = 0;
+		printf("Please input the thread num:");
+		scanf("%d", &threads);
+		while (1)
+		{
+			
+			nRet = MV_CC_GetImageBuffer(handle, &stOutFrame, 1000);
+			if (nRet == MV_OK)
+			{
+				/*printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d]\n",
+					stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nFrameNum);*/
+				Twatch.start();
+					//生成cv::Mat
+				Mat matImage(
+					cvSize(stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight),
+					CV_8UC1,
+					stOutFrame.pBufAddr
+				);
+				int Rows = matImage.rows;
+				MPoint *point;
+				point = new MPoint[Rows];
+				double maxError = 0.05;
+				double minError = 0.25;
+				int xRange = 40;
+
+				//获取高斯中心
+				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
+
+				//double doorin = 0.5;
+				//int eHeight = 0;
+				//基于double的有阈值误差标记函数
+				//getErrorIdentifyDoubleW(matImage, point, doorin, eHeight);
+				//cvNamedWindow("Camera 0", 0); 
+				//imshow("Camera 0", matImage);
+				//cvWaitKey(1);
+				matImage.release();
+				FrameCount++;
+				Twatch.stop();
+				if (Twatch.elapsed() > 1000000)
+				{
+					printf("当前帧率为%dfps\n", FrameCount);
+					FrameCount = 0;
+					Twatch.restart();
+				}
+				delete point;
+			}
+			else
+			{
+				printf("No data[0x%x]\n", nRet);
+			}
+			if (NULL != stOutFrame.pBufAddr)
+			{
+				nRet = MV_CC_FreeImageBuffer(handle, &stOutFrame);
+				if (nRet != MV_OK)
+				{
+					printf("Free Image Buffer fail! nRet [0x%x]\n", nRet);
+				}
+			}
+
+
+			
+		}
+	}
 	}
 	
 	return 0;

@@ -31,3 +31,5 @@ int getXZmatrix(CvMat* X, CvMat* Z, int n, GPoint *gpoint);
 void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minError, int xRange, int threads);
 //基于double的有阈值误差标记函数
 void getErrorIdentifyDoubleW(Mat matImage, MPoint *point, double doorin, int eHeight);
+//误差鼠标跟踪手动标记
+void getErrorManu(Mat matImage, MPoint *point);

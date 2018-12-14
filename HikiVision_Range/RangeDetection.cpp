@@ -5,6 +5,7 @@
 #include "RangeDetection.h"
 #include "omp.h"
 #include "opencv2/opencv.hpp"
+#include"OnClickMouse.h"
 
 
 using namespace std;
@@ -278,9 +279,16 @@ void getErrorIdentifyDoubleW(Mat matImage, MPoint *point, double doorin, int eHe
 			ostringstream oss;
 			oss << error;
 			string texterror = oss.str();
-			putText(matImage, texterror, Point(point[j].cx + 40, point[j].cy), 2, 0.5, Scalar(255, 100, 100), 1, 8, 0);
+			putText(matImage, texterror, Point(point[j].cx + 40, point[j].cy), 2, 1.5, Scalar(255, 100, 100), 1, 8, 0);
 		}
 	}
 	namedWindow("error identification",0);
 	imshow("error identification", matImage);
+
+}
+
+//基于cvSetMouseCallback的手动标注
+void getErrorManu(Mat matImage, MPoint *point)
+{
+	GetMouseIdentify(matImage, point);
 }
