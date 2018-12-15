@@ -15,6 +15,7 @@ typedef struct MPoint
 	double cy;  //高斯拟合行位置
 	int bright;  //高斯拟合最大亮度（虚拟最大亮度）
 	int Pixnum;  //高斯点个数
+	int Rows;    //图像总行数
 } MPoint;
 
 //高斯点

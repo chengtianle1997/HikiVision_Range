@@ -61,7 +61,7 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 	Point tmp_pt = { -1,-1 };
 
-	char temp[16];
+	char temp[100];
 
 	Size text_size;
 
@@ -73,7 +73,9 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 	Scalar clrText = Scalar(255, 255, 255, 0);
 
+	MPoint *point = (MPoint*)ustc;
 
+	//MPoint *point = { 0 };
 
 	if (event == CV_EVENT_MOUSEMOVE)
 
@@ -90,7 +92,11 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 		circle(src, pt, 2, clrPoint, 1, 8, 0);
 
 
-		sprintf(temp, "%d (%d,%d)", n + 1, x, y);
+		//sprintf(temp, "%d (%d,%d)", n + 1, x, y);
+
+		if(y>1&&y<point[0].Rows)
+		sprintf(temp, "Row:%d , center:%f , ErrorUp:%f , ErrorDown:%f", y, point[y].cx, point[y].cx - point[y-1].cx, point[y].cx - point[y + 1].cx);
+
 
 		//getTextSize(temp, 2, &text_size, &baseline);
 
@@ -98,9 +104,9 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 		//tmp_pt.y = bound(pt.y, text_size.height + baseline, src->height - 1 - baseline);
 
-		tmp_pt = Point(x, y);
+		tmp_pt = Point(x+30, y);
 
-		putText(src, temp, tmp_pt, 2, 1.5, clrText, 1, 8, 0);
+		putText(src, temp, tmp_pt, 2, 1, clrText, 1, 8, 0);
 
 		imshow("src", src);
 
@@ -116,7 +122,10 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 		circle(src, pt, 2, clrPoint, 1, 8, 0);
 
-		sprintf(temp, "%d (%d,%d)", n, x, y);
+		//sprintf(temp, "%d (%d,%d)", n, x, y);
+
+		if (y > 1 && y < point[0].Rows)
+		sprintf(temp, "Row:%d , center:%f , ErrorUp:%f , ErrorDown:%f", y, point[y].cx, point[y].cx - point[y - 1].cx, point[y].cx - point[y + 1].cx);
 
 		//cvGetTextSize(temp, &font, &text_size, &baseline);
 
@@ -124,9 +133,9 @@ void on_mouse(int event, int x, int y, int flags, void* ustc)
 
 		//tmp_pt.y = bound(pt.y, text_size.height + baseline, src->height - 1 - baseline);
 
-		tmp_pt = Point(x, y);
+		tmp_pt = Point(x+30, y);
 
-		putText(src, temp, tmp_pt, 2, 1.5, clrText, 1, 8, 0);
+		putText(src, temp, tmp_pt, 2, 1, clrText, 1, 8, 0);
 
 		src.copyTo(dst);
 
@@ -189,6 +198,7 @@ int GetMouseIdentify(Mat matImage , MPoint *point)
 {
 
 	//src = imread("lena.jpg", 1);
+
 	src = matImage.clone();
 
 	dst = src.clone();
@@ -197,7 +207,7 @@ int GetMouseIdentify(Mat matImage , MPoint *point)
 
 	cvNamedWindow("src", 0);
 
-	cvSetMouseCallback("src", on_mouse, 0);
+	cvSetMouseCallback("src", on_mouse, (void*)point);
 
 	imshow("src", src);
 

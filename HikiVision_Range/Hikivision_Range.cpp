@@ -484,8 +484,11 @@ int main()
 				double minError = 0.25;
 				int xRange = 40;
 				int threads = 8;
+				//Calculate
 				getGaussCenter(matImage, point, maxError, minError, xRange, threads);
-				cvNamedWindow("src", 0);
+				//put the rows of mat in point[0]
+				point[0].Rows = Rows;
+				//cvNamedWindow("src", 0);
 				getErrorManu(matImage, point);
 				matImage.release();
 				delete point;

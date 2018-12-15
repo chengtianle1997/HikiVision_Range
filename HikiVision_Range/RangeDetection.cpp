@@ -82,6 +82,7 @@ void getGaussCenter(Mat matImage, MPoint *point, double maxError, double minErro
 		point[i].x = MaxX;
 		//point[i].bright = MaxPixel;
 		point[i].brightness = MaxPixel;
+		//point[i].Rows = Rows;
 	}
 	/*for (int i = 0; i < Rows; i++)
 	{
